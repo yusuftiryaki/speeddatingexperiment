@@ -21,7 +21,7 @@ When you save the notebook, an HTML file containing the code and output will be 
 
 ```{python}
 import pandas
-print("hello")
+print("hello ...")
 
 ```
 
