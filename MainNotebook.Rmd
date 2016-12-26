@@ -1,27 +1,236 @@
 ---
-title: "R Notebook"
+title: "DEGPG"
+author: "Orkun, Özgür, Yusuf"
 output: html_notebook
 ---
-#Giriş
-###Hikaye
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
 
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
-```{r}
-plot(cars)
+# Giriş
+## Hikayemiz
+Hızlı tempolu şehir hayatının dezavantajlarından biri de eş bulmak için gerekli vakit ve iletişim ortamının yaratılamaması olarak karşımıza çıkıyor.
+Bu probleme çözüm olarak katılımcıların bir çok eş adayı ile hızlı bir şekilde tanışabileceği etkinliklerin düzenlendiğini görüyoruz.<br>
+...<br>
+...<br>
+Bu incelememizde katılımcıların kendi kendilerini nasıl tanımladıklarını, diğer insanların değerlendirmesi ile karşılaştırıp kendi tanımlarının beğeni almada etkili olup olmadığını sorgulayacağız. 
+
+## Veri kümesi
+Veri kümesi 195 özellik barındırıyor
+8368 gözlem var
+278 Erkek
+276 Kadın
+
+# Veri Temizliği ve Ön Hazırlık
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
+#kullanılacak paketler
+require(ggplot2)
+require(dplyr)
+require(reshape2)
+require(ggradar)
+require(grid)
+require(gridExtra)
+require(devtools)
+
+devtools::install_github("ricardo-bion/ggradar", 
+                          dependencies=TRUE)
+
+rawdat <- 
+read.csv('./data/Speed Dating Data.csv', header = T, stringsAsFactors = F)
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+## Veri dönüşümleri
+Cinsiyet factor tipine dönüştürüldü
+```{r tranformations, echo = FALSE}
+data.transformed <- rawdat
+#Cinsiyeti daha okunur yapalım
+data.transformed[rawdat$gender == 0,]$gender <- 'Female'
+data.transformed[rawdat$gender == 1,]$gender <- 'Male'
+data.transformed$gender <- as.factor(data.transformed$gender)
+```
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
-```{r}
+## Veri temizleme
+Değerlendirmenin kimin için yapıldığı belli değilse analize girmemeli
+```{r data clean, echo = FALSE}
+#sadece kullanacağımız attribute'ları alalım
+data.cleaned <-
+data.transformed %>%
+  filter(!pid == "NA" & !id =="NA")
+```
+
+## Veri ayıklama
+Sadece kullanacağımız değerlerden yeni bir veri kümesi oluşturduk
+```{r data selection, echo = FALSE}
+#sadece kullanacağımız attribute'ları alalım
+data.analyse <-
+data.cleaned %>%
+  select(iid,pid, gender, attr3_1, sinc3_1, intel3_1, fun3_1, amb3_1, attr5_1, sinc5_1, intel5_1, fun5_1, amb5_1, attr, sinc, intel, fun, amb, shar,attr_o, sinc_o, intel_o, fun_o, amb_o, shar_o,dec_o,dec)
+# geçici tabloları temizleyelim
+rm(data.transformed,data.cleaned)
+
+```
+# Analiz
+## Katılımcılar kendilerini nasıl değerlendiriyor
+
+```{r how  measure yourself, echo = FALSE}
+data.measure.yourself.mean <-
+  data.analyse %>% 
+  filter(!is.na(attr3_1)) %>%
+  group_by(gender) %>% 
+  summarise(Attractive = mean(attr3_1), Sincere = mean(sinc3_1), Intelligent = mean(intel3_1), Fun = mean(fun3_1), Ambitious = mean(amb3_1)) 
+plot.measure.yourself.mean.all <- ggradar(plot.data = data.measure.yourself.mean, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4 )
+plot.measure.yourself.mean.all
+
+plot.measure.yourself <- ggplot(data = data.analyse) + coord_flip()
+
+plot.measure.yourself.attractive <- plot.measure.yourself + geom_boxplot(mapping = aes(x = gender, y = attr3_1)) + labs(y="Attractiveness", x ="Gender", title = "How Attractive Are You?")
+
+plot.measure.yourself.ambitious <- plot.measure.yourself + geom_boxplot(mapping = aes(x = gender, y = amb3_1)) + labs(y="Ambitious", x ="Gender", title = "How Ambitious Are You?")
+
+plot.measure.yourself.sincere <- plot.measure.yourself + geom_boxplot(mapping = aes(x = gender, y = sinc3_1)) + labs(y="Sincere", x ="Gender", title = "How Sincere Are You?")
+
+plot.measure.yourself.intelligent <- plot.measure.yourself + geom_boxplot(mapping = aes(x = gender, y = intel3_1)) + labs(y="Intelligent", x ="Gender", title = "How Intelligence Are You?")
+
+
+plot.measure.yourself.fun <- plot.measure.yourself + geom_boxplot(mapping = aes(x = gender, y = intel3_1)) + labs(y="Fun", x ="Gender", title = "How Fun Are You?")
+
+grid.arrange(plot.measure.yourself.attractive, plot.measure.yourself.ambitious, plot.measure.yourself.sincere, plot.measure.yourself.intelligent, plot.measure.yourself.fun, ncol = 1)
+#median daha açıklayıcı
+data.measure.yourself.median <-
+  data.analyse %>% 
+  filter(!is.na(attr3_1)) %>%
+  group_by(gender) %>% 
+  summarise(Attractive = median(attr3_1), Sincere = median(sinc3_1), Intelligent = median(intel3_1), Fun = median(fun3_1), Ambitious = median(amb3_1)) 
+plot.measure.yourself.median.all <- ggradar(plot.data = data.measure.yourself.median, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4 )
+plot.measure.yourself.median.all
 
 ```
 
-```{python}
-import pandas
-print("hello ...2")
+## Katılımcılar kendilerinin nasıl değerlendirileceğini düşünüyor
+
+```{r how  other percieve, echo = FALSE}
+data.other.percieve.mean <-
+  data.analyse %>% 
+  filter(!is.na(attr5_1)) %>%
+  group_by(gender) %>% 
+  summarise(Attractive = mean(attr5_1), Sincere = mean(sinc5_1), Intelligent = mean(intel5_1), Fun = mean(fun5_1), Ambitious = mean(amb5_1))
+
+plot.other.percieve.mean.all <- ggradar(plot.data = data.other.percieve.mean, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4)
+plot.other.percieve.mean.all
+
+plot.other.percieve <- ggplot(data = data.analyse) +  coord_flip()
+
+plot.other.percieve.attractive <- plot.other.percieve + geom_boxplot(mapping = aes(x = gender, y = attr5_1)) + labs(y="Attractiveness", x ="Gender", title = "How Attractive Are You By Others?")
+
+plot.other.percieve.ambitious <- plot.other.percieve + geom_boxplot(mapping = aes(x = gender, y = amb5_1)) + labs(y="Ambitious", x ="Gender", title = "How Ambitious Are You By Others?")
+
+plot.other.percieve.sincere <- plot.other.percieve + geom_boxplot(mapping = aes(x = gender, y = sinc5_1)) + labs(y="Sincere", x ="Gender", title = "How Sincere Are You By Others?")
+
+plot.other.percieve.intelligent <- plot.other.percieve + geom_boxplot(mapping = aes(x = gender, y = intel5_1)) + labs(y="Intelligent", x ="Gender", title = "How Intelligence Are You By Others?")
+
+plot.other.percieve.fun <-plot.other.percieve + geom_boxplot(mapping = aes(x = gender, y = intel5_1)) + labs(y="Fun", x ="Gender", title = "How Fun Are You By Others?")
+
+grid.arrange(plot.other.percieve.attractive, plot.other.percieve.ambitious, plot.other.percieve.sincere, plot.other.percieve.intelligent, plot.other.percieve.fun, ncol = 1 )
+
+# median mean'den daha açıklayıcı görünüyor
+data.other.percieve.median <-
+  data.analyse %>% 
+  filter(!is.na(attr5_1)) %>%
+  group_by(gender) %>% 
+  summarise(Attractive = median(attr5_1), Sincere = median(sinc5_1), Intelligent = median(intel5_1), Fun = median(fun5_1), Ambitious = median(amb5_1))
+
+plot.other.percieve.median.all <- ggradar(plot.data = data.other.percieve.median, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4)
+plot.other.percieve.median.all
 
 ```
 
+## Göründüğümüz gibi olduğumuzu mu düşünüyoruz?
+```{r are we same test, echo = TRUE}
+data.others.yourself <-
+  data.analyse %>% 
+  filter(!is.na(attr5_1)&!is.na(attr3_1)) %>%
+  group_by(iid) %>% 
+  summarise(Attractive.Others = median(attr5_1), Sincere.Others = median(sinc5_1), Intelligent.Others = median(intel5_1), Fun.Others = median(fun5_1), Ambitious.Others = median(amb5_1), Attractive.Yourself = median(attr3_1), Sincere.Yourself = median(sinc3_1), Intelligent.Yourself = median(intel3_1), Fun.Yourself = median(fun3_1), Ambitious.Yourself = median(amb3_1))
+
+
+
+plot.others.yourself <- ggplot(data = data.others.yourself) + geom_jitter(alpha = 0.2) + geom_smooth(method = "lm") + scale_x_continuous(breaks = seq(0,10,1)) + theme(panel.background = element_blank())
+
+t.test(data.others.yourself$Attractive.Yourself, data.others.yourself$Attractive.Others, paired=TRUE) -> t.others.yourself.attractive
+t.others.yourself.attractive
+cor.test(data = data.others.yourself, ~Attractive.Yourself+Attractive.Others) -> cor.others.yourself.attractive
+cor.others.yourself.attractive
+plot.others.yourself.attractive <- plot.others.yourself + aes(x = Attractive.Yourself, y = Attractive.Others) + annotate("text", x = 10, y = 1, label = paste("Cor = ",round(cor.others.yourself.attractive$estimate,digits = 4) )) +
+annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourself.attractive$p.value, digits = 4) ))
+plot.others.yourself.attractive
+
+t.test(data.others.yourself$Ambitious.Yourself, data.others.yourself$Ambitious.Others, paired=TRUE)-> t.others.yourself.ambitious
+t.others.yourself.ambitious
+cor.test(data = data.others.yourself, ~Ambitious.Yourself+Ambitious.Others) -> cor.others.yourself.ambitious
+cor.others.yourself.ambitious
+plot.others.yourself.ambitious <- plot.others.yourself + aes(x = Ambitious.Yourself, y = Ambitious.Others) + annotate("text", x = 10, y = 1, label = paste("Cor = ",round(cor.others.yourself.ambitious$estimate,digits = 4) )) +
+annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourself.ambitious$p.value, digits = 4) ))
+plot.others.yourself.ambitious
+
+t.test(data.others.yourself$Sincere.Yourself, data.others.yourself$Sincere.Others, paired=TRUE)-> t.others.yourself.sincere
+t.others.yourself.sincere
+cor.test(data = data.others.yourself, ~Sincere.Yourself+Sincere.Others) -> cor.others.yourself.sincere
+cor.others.yourself.sincere
+plot.others.yourself.sincere <- plot.others.yourself + aes(x = Sincere.Yourself, y = Sincere.Others) + annotate("text", x = 10, y = 1, label = paste("Cor = ",round(cor.others.yourself.sincere$estimate,digits = 4) )) +
+annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourself.sincere$p.value, digits = 4) ))
+plot.others.yourself.sincere
+
+t.test(data.others.yourself$Intelligent.Yourself, data.others.yourself$Intelligent.Others, paired=TRUE)-> t.others.yourself.intelligent
+t.others.yourself.intelligent
+cor.test(data = data.others.yourself, ~Intelligent.Yourself+Intelligent.Others) -> cor.others.yourself.intelligent
+cor.others.yourself.intelligent
+plot.others.yourself.intelligent <- plot.others.yourself + aes(x = Intelligent.Yourself, y = Intelligent.Others) + annotate("text", x = 10, y = 1, label = paste("Cor = ",round(cor.others.yourself.intelligent$estimate,digits = 4) )) +
+annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourself.intelligent$p.value, digits = 4) ))
+plot.others.yourself.intelligent
+
+t.test(data.others.yourself$Fun.Yourself, data.others.yourself$Fun.Others, paired=TRUE)-> t.others.yourself.fun
+t.others.yourself.fun
+cor.test(data = data.others.yourself, ~Fun.Yourself+Fun.Others) -> cor.others.yourself.fun
+cor.others.yourself.fun
+plot.others.yourself.fun <- plot.others.yourself + aes(x = Fun.Yourself, y = Fun.Others) + annotate("text", x = 10, y = 1, label = paste("Cor = ",round(cor.others.yourself.fun$estimate,digits = 4) )) +
+annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourself.fun$p.value, digits = 4) ))
+plot.others.yourself.fun
+
+
+grid.arrange(plot.others.yourself.attractive, plot.others.yourself.ambitious,   plot.others.yourself.sincere, plot.others.yourself.intelligent, plot.others.yourself.fun)
+
+```
+
+```{r are we same, echo = FALSE}
+grid.arrange(plot.measure.yourself.median.all, plot.other.percieve.median.all, ncol = 1)
+```
+
+```{r market value, echo = FALSE}
+data.partners.stated.mean <-
+  data.analyse %>% 
+  filter(!is.na(attr_o) & !is.na(sinc_o) & !is.na(intel_o)& !is.na(fun_o)& !is.na(amb_o)) %>% 
+  group_by(gender) %>% 
+  summarise(Attractive = mean(attr_o), Sincere = mean(sinc_o), Intelligent = mean(intel_o), Fun = mean(fun_o), mean = median(amb_o))
+
+plot.partners.stated.mean.all <- ggradar(plot.data = data.partners.stated.mean , grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4 )
+plot.partners.stated.mean.all
+
+data.partners.stated.mean.yourself <-
+  data.analyse %>% 
+  filter(!is.na(attr3_1) & !is.na(attr_o) & !is.na(sinc_o) & !is.na(intel_o)& !is.na(fun_o)& !is.na(amb_o)) %>% 
+  group_by(iid) %>% 
+  summarise(Gender = first(gender), Attractive.Yourself = median(attr3_1), Attractive.Partners = mean(attr_o), Sincere.Yourself = median(sinc3_1), Sincere.Partners = mean(sinc_o), Intelligent.Yourself = median(attr3_1), Intelligent.Partners = mean(intel_o), Fun = mean(fun_o), mean = median(amb_o))
+
+
+cor.test(data = data.partners.stated.mean.yourself,  ~Attractive.Yourself+Attractive.Partners)
+cor.test(data = subset(data.partners.stated.mean.yourself,Gender == 'Male'),  ~Attractive.Yourself+Attractive.Partners)
+cor.test(data = subset(data.partners.stated.mean.yourself,Gender == 'Female'),  ~Attractive.Yourself+Attractive.Partners)
+
+ggplot(data = data.partners.stated.mean.yourself,
+       mapping = aes(x =Attractive.Yourself, y= Attractive.Partners)) + geom_jitter() + geom_smooth(method = lm) + facet_wrap(~Gender) + geom_hline(aes( yintercept=mean(Attractive.Partners)),color = "red", linetype = 3)+ geom_vline(aes( xintercept=mean(Attractive.Yourself)),color = "red", linetype = 3)
+
+cor.test(data = data.partners.stated.mean.yourself,  ~Sincere.Yourself+Sincere.Partners)
+cor.test(data = data.partners.stated.mean.yourself,  ~Intelligent.Yourself+Intelligent.Partners)
+ggplot(data = data.partners.stated.mean.yourself,
+       mapping = aes(x =Intelligent.Yourself, y= Intelligent.Partners)) + geom_jitter() + geom_smooth(method = lm) + facet_wrap(~Gender) + geom_hline(aes(color = "red", yintercept=mean(Intelligent.Partners)))
+
+```
