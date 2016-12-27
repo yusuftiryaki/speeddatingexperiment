@@ -23,14 +23,10 @@ Veri kümesi 195 özellik barındırıyor
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
 #kullanılacak paketler
-require(ggplot2)
-require(dplyr)
-require(reshape2)
-require(ggradar)
-require(grid)
-require(gridExtra)
-require(devtools)
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("scales","ggplot2","dplyr","reshape2","grid","gridExtra","devtools")
 
+if (!require(ggradar))
 devtools::install_github("ricardo-bion/ggradar", 
                           dependencies=TRUE)
 
