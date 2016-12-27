@@ -26,7 +26,7 @@ Veri kümesi 195 özellik barındırıyor
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
 #kullanılacak paketler
 if (!require("pacman")) install.packages("pacman")
-  pacman::p_load("scales","ggplot2","dplyr","reshape2","grid","gridExtra","devtools")
+  pacman::p_load("scales","ggplot2","dplyr","reshape2","grid","gridExtra","devtools","ggally")
 
 if (!require(ggradar))
   devtools::install_github("ricardo-bion/ggradar", 
@@ -52,10 +52,10 @@ data.transformed$gender <- as.factor(data.transformed$gender)
 ## Veri temizleme
 Değerlendirmenin kimin için yapıldığı belli değilse analize girmemeli
 ```{r data clean, echo = FALSE}
-#sadece kullanacağımız attribute'ları alalım
+#id yada partner id olmayanları çıkar
 data.cleaned <-
 data.transformed %>%
-  filter(!pid == "NA" & !id =="NA")
+  filter(!pid == "NA" | !id =="NA")
 ```
 
 ## Veri ayıklama
@@ -72,35 +72,64 @@ rm(data.transformed,data.cleaned)
 # Analiz
 ## Katılımcılar kendilerini nasıl değerlendiriyor
 
+```{r extract data}
+data.others.yourself.partners <-
+  data.analyse %>% 
+  filter(!is.na(attr5_1)&!is.na(attr3_1)) %>%
+  group_by(iid) %>% 
+  summarise(
+    Gender = first(gender), 
+    Attractive.Others = first(attr5_1), 
+    Sincere.Others = first(sinc5_1), 
+    Intelligent.Others = first(intel5_1), 
+    Fun.Others = first(fun5_1), 
+    Ambitious.Others = first(amb5_1), 
+    Attractive.Yourself = first(attr3_1), 
+    Sincere.Yourself = first(sinc3_1), 
+    Intelligent.Yourself = first(intel3_1), 
+    Fun.Yourself = first(fun3_1), 
+    Ambitious.Yourself = first(amb3_1),
+    Attractive.Partners = mean(attr_o), 
+    Sincere.Partners = mean(sinc_o), 
+    Intelligent.Partners = mean(intel_o), 
+    Fun.Partners = mean(fun_o), 
+    Ambitious.Partners = mean(amb_o))
+GGally::ggpairs(data = data.others.yourself.partners)
+```
+
 ```{r how  measure yourself, echo = FALSE}
 data.measure.yourself.mean <-
-  data.analyse %>% 
-  filter(!is.na(attr3_1)) %>%
-  group_by(gender) %>% 
-  summarise(Attractive = mean(attr3_1), Sincere = mean(sinc3_1), Intelligent = mean(intel3_1), Fun = mean(fun3_1), Ambitious = mean(amb3_1)) 
+  data.others.yourself.partners %>% 
+  filter(!is.na(Attractive.Yourself)) %>%
+  group_by(Gender) %>% 
+  summarise(Attractive = mean(Attractive.Yourself), Sincere = mean(Sincere.Yourself), Intelligent = mean(Intelligent.Yourself), Fun = mean(Fun.Yourself), Ambitious = mean(Ambitious.Yourself))
+
 plot.measure.yourself.mean.all <- ggradar(plot.data = data.measure.yourself.mean, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4 )
 plot.measure.yourself.mean.all
 
-plot.measure.yourself <- ggplot(data = data.analyse) + coord_flip()
 
-plot.measure.yourself.attractive <- plot.measure.yourself + geom_boxplot(mapping = aes(x = gender, y = attr3_1)) + labs(y="Attractiveness", x ="Gender", title = "How Attractive Are You?")
+plot.measure.yourself <- ggplot(data = data.others.yourself.partners) + coord_flip()
 
-plot.measure.yourself.ambitious <- plot.measure.yourself + geom_boxplot(mapping = aes(x = gender, y = amb3_1)) + labs(y="Ambitious", x ="Gender", title = "How Ambitious Are You?")
+plot.measure.yourself.attractive <- plot.measure.yourself + geom_boxplot(mapping = aes(x = Gender, y = Attractive.Yourself)) + labs(y="Attractiveness", x ="Gender", title = "How Attractive Are You?")
 
-plot.measure.yourself.sincere <- plot.measure.yourself + geom_boxplot(mapping = aes(x = gender, y = sinc3_1)) + labs(y="Sincere", x ="Gender", title = "How Sincere Are You?")
+plot.measure.yourself.ambitious <- plot.measure.yourself + geom_boxplot(mapping = aes(x = Gender, y = Ambitious.Yourself)) + labs(y="Ambitious", x ="Gender", title = "How Ambitious Are You?")
 
-plot.measure.yourself.intelligent <- plot.measure.yourself + geom_boxplot(mapping = aes(x = gender, y = intel3_1)) + labs(y="Intelligent", x ="Gender", title = "How Intelligence Are You?")
+plot.measure.yourself.sincere <- plot.measure.yourself + geom_boxplot(mapping = aes(x = Gender, y = Sincere.Yourself)) + labs(y="Sincere", x ="Gender", title = "How Sincere Are You?")
+
+plot.measure.yourself.intelligent <- plot.measure.yourself + geom_boxplot(mapping = aes(x = Gender, y = Intelligent.Yourself)) + labs(y="Intelligent", x ="Gender", title = "How Intelligence Are You?")
 
 
-plot.measure.yourself.fun <- plot.measure.yourself + geom_boxplot(mapping = aes(x = gender, y = intel3_1)) + labs(y="Fun", x ="Gender", title = "How Fun Are You?")
+plot.measure.yourself.fun <- plot.measure.yourself + geom_boxplot(mapping = aes(x = Gender, y = Fun.Yourself)) + labs(y="Fun", x ="Gender", title = "How Fun Are You?")
+
 
 grid.arrange(plot.measure.yourself.attractive, plot.measure.yourself.ambitious, plot.measure.yourself.sincere, plot.measure.yourself.intelligent, plot.measure.yourself.fun, ncol = 1)
+
 #median daha açıklayıcı
 data.measure.yourself.median <-
-  data.analyse %>% 
-  filter(!is.na(attr3_1)) %>%
-  group_by(gender) %>% 
-  summarise(Attractive = median(attr3_1), Sincere = median(sinc3_1), Intelligent = median(intel3_1), Fun = median(fun3_1), Ambitious = median(amb3_1)) 
+  data.others.yourself.partners %>% 
+  filter(!is.na(Attractive.Yourself)) %>%
+  group_by(Gender) %>% 
+  summarise(Attractive = median(Attractive.Yourself), Sincere = median(Sincere.Yourself), Intelligent = median(Intelligent.Yourself), Fun = median(Fun.Yourself), Ambitious = median(Ambitious.Yourself)) 
 plot.measure.yourself.median.all <- ggradar(plot.data = data.measure.yourself.median, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4 )
 plot.measure.yourself.median.all
 
@@ -110,34 +139,34 @@ plot.measure.yourself.median.all
 
 ```{r how  other percieve, echo = FALSE}
 data.other.percieve.mean <-
-  data.analyse %>% 
-  filter(!is.na(attr5_1)) %>%
-  group_by(gender) %>% 
-  summarise(Attractive = mean(attr5_1), Sincere = mean(sinc5_1), Intelligent = mean(intel5_1), Fun = mean(fun5_1), Ambitious = mean(amb5_1))
+  data.others.yourself.partners %>% 
+  filter(!is.na(Attractive.Others)) %>%
+  group_by(Gender) %>% 
+  summarise(Attractive = mean(Attractive.Others), Sincere = mean(Sincere.Others), Intelligent = mean(Intelligent.Others), Fun = mean(Fun.Others), Ambitious = mean(Ambitious.Others))
 
 plot.other.percieve.mean.all <- ggradar(plot.data = data.other.percieve.mean, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4)
 plot.other.percieve.mean.all
 
-plot.other.percieve <- ggplot(data = data.analyse) +  coord_flip()
+plot.other.percieve <- ggplot(data = data.others.yourself.partners) +  coord_flip()
 
-plot.other.percieve.attractive <- plot.other.percieve + geom_boxplot(mapping = aes(x = gender, y = attr5_1)) + labs(y="Attractiveness", x ="Gender", title = "How Attractive Are You By Others?")
+plot.other.percieve.attractive <- plot.other.percieve + geom_boxplot(mapping = aes(x = Gender, y = Attractive.Others)) + labs(y="Attractiveness", x ="Gender", title = "How Attractive Are You By Others?")
 
-plot.other.percieve.ambitious <- plot.other.percieve + geom_boxplot(mapping = aes(x = gender, y = amb5_1)) + labs(y="Ambitious", x ="Gender", title = "How Ambitious Are You By Others?")
+plot.other.percieve.ambitious <- plot.other.percieve + geom_boxplot(mapping = aes(x = Gender, y = Ambitious.Others)) + labs(y="Ambitious", x ="Gender", title = "How Ambitious Are You By Others?")
 
-plot.other.percieve.sincere <- plot.other.percieve + geom_boxplot(mapping = aes(x = gender, y = sinc5_1)) + labs(y="Sincere", x ="Gender", title = "How Sincere Are You By Others?")
+plot.other.percieve.sincere <- plot.other.percieve + geom_boxplot(mapping = aes(x = Gender, y = Sincere.Others)) + labs(y="Sincere", x ="Gender", title = "How Sincere Are You By Others?")
 
-plot.other.percieve.intelligent <- plot.other.percieve + geom_boxplot(mapping = aes(x = gender, y = intel5_1)) + labs(y="Intelligent", x ="Gender", title = "How Intelligence Are You By Others?")
+plot.other.percieve.intelligent <- plot.other.percieve + geom_boxplot(mapping = aes(x = Gender, y = Intelligent.Others)) + labs(y="Intelligent", x ="Gender", title = "How Intelligence Are You By Others?")
 
-plot.other.percieve.fun <-plot.other.percieve + geom_boxplot(mapping = aes(x = gender, y = intel5_1)) + labs(y="Fun", x ="Gender", title = "How Fun Are You By Others?")
+plot.other.percieve.fun <-plot.other.percieve + geom_boxplot(mapping = aes(x = Gender, y = Fun.Others)) + labs(y="Fun", x ="Gender", title = "How Fun Are You By Others?")
 
 grid.arrange(plot.other.percieve.attractive, plot.other.percieve.ambitious, plot.other.percieve.sincere, plot.other.percieve.intelligent, plot.other.percieve.fun, ncol = 1 )
 
 # median mean'den daha açıklayıcı görünüyor
 data.other.percieve.median <-
-  data.analyse %>% 
-  filter(!is.na(attr5_1)) %>%
-  group_by(gender) %>% 
-  summarise(Attractive = median(attr5_1), Sincere = median(sinc5_1), Intelligent = median(intel5_1), Fun = median(fun5_1), Ambitious = median(amb5_1))
+  data.others.yourself.partners %>% 
+  filter(!is.na(Attractive.Others)) %>%
+  group_by(Gender) %>% 
+  summarise(Attractive = median(Attractive.Others), Sincere = median(Sincere.Others), Intelligent = median(Intelligent.Others), Fun = median(Fun.Others), Ambitious = median(Ambitious.Others))
 
 plot.other.percieve.median.all <- ggradar(plot.data = data.other.percieve.median, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4)
 plot.other.percieve.median.all
@@ -147,10 +176,8 @@ plot.other.percieve.median.all
 ## Göründüğümüz gibi olduğumuzu mu düşünüyoruz?
 ```{r are we same test, echo = TRUE}
 data.others.yourself <-
-  data.analyse %>% 
-  filter(!is.na(attr5_1)&!is.na(attr3_1)) %>%
-  group_by(iid) %>% 
-  summarise(Attractive.Others = median(attr5_1), Sincere.Others = median(sinc5_1), Intelligent.Others = median(intel5_1), Fun.Others = median(fun5_1), Ambitious.Others = median(amb5_1), Attractive.Yourself = median(attr3_1), Sincere.Yourself = median(sinc3_1), Intelligent.Yourself = median(intel3_1), Fun.Yourself = median(fun3_1), Ambitious.Yourself = median(amb3_1))
+  data.others.yourself.partners %>% 
+  filter(!is.na(Attractive.Others)&!is.na(Attractive.Yourself))
 
 
 
@@ -207,19 +234,17 @@ grid.arrange(plot.measure.yourself.median.all, plot.other.percieve.median.all, n
 
 ```{r market value, echo = FALSE}
 data.partners.stated.mean <-
-  data.analyse %>% 
-  filter(!is.na(attr_o) & !is.na(sinc_o) & !is.na(intel_o)& !is.na(fun_o)& !is.na(amb_o)) %>% 
-  group_by(gender) %>% 
-  summarise(Attractive = mean(attr_o), Sincere = mean(sinc_o), Intelligent = mean(intel_o), Fun = mean(fun_o), mean = median(amb_o))
+  data.others.yourself.partners %>% 
+  filter(!is.na(Attractive.Partners)&!is.na(Sincere.Partners)&!is.na(Intelligent.Partners)&!is.na(Fun.Partners)&!is.na(Ambitious.Partners)) %>%
+  group_by(Gender) %>% 
+  summarise(Attractive = mean(Attractive.Partners), Sincere = mean(Sincere.Partners), Intelligent = mean(Intelligent.Partners), Fun = mean(Fun.Partners), Ambitious = mean(Ambitious.Partners))
 
 plot.partners.stated.mean.all <- ggradar(plot.data = data.partners.stated.mean , grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4 )
 plot.partners.stated.mean.all
 
 data.partners.stated.mean.yourself <-
-  data.analyse %>% 
-  filter(!is.na(attr3_1) & !is.na(attr_o) & !is.na(sinc_o) & !is.na(intel_o)& !is.na(fun_o)& !is.na(amb_o)) %>% 
-  group_by(iid) %>% 
-  summarise(Gender = first(gender), Attractive.Yourself = median(attr3_1), Attractive.Partners = mean(attr_o), Sincere.Yourself = median(sinc3_1), Sincere.Partners = mean(sinc_o), Intelligent.Yourself = median(attr3_1), Intelligent.Partners = mean(intel_o), Fun = mean(fun_o), mean = median(amb_o))
+   data.others.yourself.partners %>% 
+  filter(!is.na(Attractive.Partners)&!is.na(Sincere.Partners)&!is.na(Intelligent.Partners)&!is.na(Fun.Partners)&!is.na(Ambitious.Partners))
 
 
 cor.test(data = data.partners.stated.mean.yourself,  ~Attractive.Yourself+Attractive.Partners)
