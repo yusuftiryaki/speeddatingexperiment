@@ -1,7 +1,9 @@
 ---
-title: "DEGPG"
-author: "Orkun, Özgür, Yusuf"
-output: html_notebook
+title: "Speed Dating Experiment by DEGPG"
+author: "Orkun, Ozgur, Yusuf"
+output:
+  html_notebook: default
+  html_document: default
 ---
 
 
@@ -150,7 +152,7 @@ data.others.yourself <-
 
 
 plot.others.yourself <- ggplot(data = data.others.yourself) + geom_jitter(alpha = 0.2) + geom_smooth(method = "lm") + scale_x_continuous(breaks = seq(0,10,1)) + theme(panel.background = element_blank())
-
+#aynı populasyon mu için t-paiared test
 t.test(data.others.yourself$Attractive.Yourself, data.others.yourself$Attractive.Others, paired=TRUE) -> t.others.yourself.attractive
 t.others.yourself.attractive
 cor.test(data = data.others.yourself, ~Attractive.Yourself+Attractive.Others) -> cor.others.yourself.attractive
