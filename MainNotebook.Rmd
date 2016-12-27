@@ -1,7 +1,9 @@
 ---
-title: "DEGPG"
-author: "Orkun, Özgür, Yusuf"
-output: html_notebook
+title: "Speed Dating Experiment by DEGPG"
+author: "Orkun, Ozgur, Yusuf"
+output:
+  html_notebook: default
+  html_document: default
 ---
 
 
@@ -23,16 +25,15 @@ Veri kümesi 195 özellik barındırıyor
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
 #kullanılacak paketler
-require(ggplot2)
-require(dplyr)
-require(reshape2)
-require(ggradar)
-require(grid)
-require(gridExtra)
-require(devtools)
+if (!require("pacman")) install.packages("pacman")
+  pacman::p_load("scales","ggplot2","dplyr","reshape2","grid","gridExtra","devtools")
 
-devtools::install_github("ricardo-bion/ggradar", 
+if (!require(ggradar))
+  devtools::install_github("ricardo-bion/ggradar", 
                           dependencies=TRUE)
+
+if(!exists("IFDEF_DEGPG_UTILS"))
+  source("Utils.R")
 
 rawdat <- 
 read.csv('./data/Speed Dating Data.csv', header = T, stringsAsFactors = F)
@@ -154,7 +155,7 @@ data.others.yourself <-
 
 
 plot.others.yourself <- ggplot(data = data.others.yourself) + geom_jitter(alpha = 0.2) + geom_smooth(method = "lm") + scale_x_continuous(breaks = seq(0,10,1)) + theme(panel.background = element_blank())
-
+#aynı populasyon mu için t-paiared test
 t.test(data.others.yourself$Attractive.Yourself, data.others.yourself$Attractive.Others, paired=TRUE) -> t.others.yourself.attractive
 t.others.yourself.attractive
 cor.test(data = data.others.yourself, ~Attractive.Yourself+Attractive.Others) -> cor.others.yourself.attractive
