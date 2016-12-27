@@ -26,11 +26,14 @@ Veri kümesi 195 özellik barındırıyor
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
 #kullanılacak paketler
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load("scales","ggplot2","dplyr","reshape2","grid","gridExtra","devtools")
+  pacman::p_load("scales","ggplot2","dplyr","reshape2","grid","gridExtra","devtools")
 
 if (!require(ggradar))
-devtools::install_github("ricardo-bion/ggradar", 
+  devtools::install_github("ricardo-bion/ggradar", 
                           dependencies=TRUE)
+
+if(!exists("IFDEF_DEGPG_UTILS"))
+  source("Utils.R")
 
 rawdat <- 
 read.csv('./data/Speed Dating Data.csv', header = T, stringsAsFactors = F)
