@@ -269,7 +269,9 @@ data.score.yourself.partners.all <- data.others.yourself.partners
 data.score.yourself.partners.males <- data.score.yourself.partners.all %>% filter(Gender == 'Male')
 data.score.yourself.partners.females <- data.score.yourself.partners.all %>% filter(Gender == 'Female')
 
-plot.score.partners <- ggplot(data = data.score.yourself.partners.all, mapping = aes(x = PositiveResponseScore, color = Gender))  + geom_point() +   geom_smooth(method = lm, se = F)
+ggplot(data = data.score.yourself.partners.all) + geom_histogram(mapping = aes(x = PositiveResponseScore,fill = Gender), binwidth = 0.02) + facet_wrap(~Gender)
+
+plot.score.partners <- ggplot(data = data.score.yourself.partners.all, mapping = aes(x = PositiveResponseScore, color = Gender))  + geom_point(alpha = 1/2) +   geom_smooth(method = lm, se = F)
 
 plot.score.partners.attractive <- plot.score.partners + aes(y = Attractive.Partners)
 plot.score.partners.ambitious <- plot.score.partners + aes(y = Ambitious.Partners)
@@ -279,10 +281,20 @@ plot.score.partners.fun <- plot.score.partners + aes(y = Fun.Partners)
 
 grid.arrange(plot.score.partners.attractive, plot.score.partners.ambitious, plot.score.partners.sincere, plot.score.partners.intelligent, plot.score.partners.fun)
 
-fit <- lm(PositiveResponseScore ~ Attractive.Partners + Ambitious.Partners+ Sincere.Partners+ Intelligent.Partners+ Fun.Partners, data = data.score.yourself.partners.all)
+fit <- lm(PositiveResponseScore ~ Attractive.Partners + Fun.Partners, data = subset(data.score.yourself.partners.all, !is.na(Attractive.Yourself)))
 summary(fit)
+data.estimation <- data.others.yourself.partners %>% select(Attractive.Yourself, Fun.Yourself, PositiveResponseScore, Gender, Attractive.Partners)  %>% filter(!is.na(Attractive.Yourself))
 
-ggplot(data = data.score.yourself.partners.all, mapping = aes())
+names(data.estimation) <- c("Attractive.Partners", "Fun.Partners","Score.Actual","Gender","Attractive.Actual")
+modelEstimate = predict(fit, newdata = estimation,
+                        interval="prediction", level = .95)
+
+data.estimation$Score.Estimated <- modelEstimate[,1]
+ggplot(data = data.estimation, mapping = aes(x = Score.Actual, y = Score.Estimated,color = Gender)) + geom_point() + scale_y_continuous(breaks = seq(0,1,0.25))
+
+
+
+#ggplot(data = data.score.yourself.partners.all, mapping = aes())
 
 
 ```
