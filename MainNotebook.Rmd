@@ -2,8 +2,8 @@
 title: "Speed Dating Experiment by DEGPG"
 author: "Orkun, Ozgur, Yusuf"
 output:
-  html_notebook: default
   html_document: default
+  html_notebook: default
 ---
 
 
@@ -26,7 +26,7 @@ Veri kümesi 195 özellik barındırıyor
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
 #kullanılacak paketler
 if (!require("pacman")) install.packages("pacman")
-  pacman::p_load("scales","ggplot2","dplyr","reshape2","grid","gridExtra","devtools","ggally")
+  pacman::p_load("scales","ggplot2","dplyr","reshape2","grid","gridExtra","devtools","GGally")
 
 if (!require(ggradar))
   devtools::install_github("ricardo-bion/ggradar", 
@@ -72,13 +72,13 @@ rm(data.transformed,data.cleaned)
 # Analiz
 ## Katılımcılar kendilerini nasıl değerlendiriyor
 
-```{r extract data}
+```{r compile data, warning=FALSE}
 data.others.yourself.partners <-
   data.analyse %>% 
-  filter(!is.na(attr5_1)&!is.na(attr3_1)) %>%
   group_by(iid) %>% 
   summarise(
-    Gender = first(gender), 
+    Gender = first(gender),
+    PositiveResponseScore = mean(dec_o, na.rm = TRUE),
     Attractive.Others = first(attr5_1), 
     Sincere.Others = first(sinc5_1), 
     Intelligent.Others = first(intel5_1), 
@@ -89,11 +89,12 @@ data.others.yourself.partners <-
     Intelligent.Yourself = first(intel3_1), 
     Fun.Yourself = first(fun3_1), 
     Ambitious.Yourself = first(amb3_1),
-    Attractive.Partners = mean(attr_o), 
-    Sincere.Partners = mean(sinc_o), 
-    Intelligent.Partners = mean(intel_o), 
-    Fun.Partners = mean(fun_o), 
-    Ambitious.Partners = mean(amb_o))
+    Attractive.Partners = mean(attr_o, na.rm = TRUE), 
+    Sincere.Partners = mean(sinc_o, na.rm = TRUE), 
+    Intelligent.Partners = mean(intel_o, na.rm = TRUE), 
+    Fun.Partners = mean(fun_o, na.rm = TRUE), 
+    Ambitious.Partners = mean(amb_o, na.rm = TRUE))
+
 GGally::ggpairs(data = data.others.yourself.partners)
 ```
 
@@ -175,6 +176,7 @@ plot.other.percieve.median.all
 
 ## Göründüğümüz gibi olduğumuzu mu düşünüyoruz?
 ```{r are we same test, echo = TRUE}
+#measure yourself and other percieve sorularını cevaplayanlar
 data.others.yourself <-
   data.others.yourself.partners %>% 
   filter(!is.na(Attractive.Others)&!is.na(Attractive.Yourself))
@@ -224,7 +226,7 @@ annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourse
 plot.others.yourself.fun
 
 
-grid.arrange(plot.others.yourself.attractive, plot.others.yourself.ambitious,   plot.others.yourself.sincere, plot.others.yourself.intelligent, plot.others.yourself.fun)
+grid.arrange(plot.others.yourself.attractive, plot.others.yourself.ambitious, plot.others.yourself.sincere, plot.others.yourself.intelligent, plot.others.yourself.fun)
 
 ```
 
@@ -233,30 +235,54 @@ grid.arrange(plot.measure.yourself.median.all, plot.other.percieve.median.all, n
 ```
 
 ```{r market value, echo = FALSE}
-data.partners.stated.mean <-
+data.partners.mean <-
   data.others.yourself.partners %>% 
   filter(!is.na(Attractive.Partners)&!is.na(Sincere.Partners)&!is.na(Intelligent.Partners)&!is.na(Fun.Partners)&!is.na(Ambitious.Partners)) %>%
   group_by(Gender) %>% 
   summarise(Attractive = mean(Attractive.Partners), Sincere = mean(Sincere.Partners), Intelligent = mean(Intelligent.Partners), Fun = mean(Fun.Partners), Ambitious = mean(Ambitious.Partners))
 
-plot.partners.stated.mean.all <- ggradar(plot.data = data.partners.stated.mean , grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4 )
-plot.partners.stated.mean.all
+plot.partners.mean.all <- ggradar(plot.data = data.partners.mean , grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4 )
+plot.partners.mean.all
 
-data.partners.stated.mean.yourself <-
+data.yourself.partners <-
    data.others.yourself.partners %>% 
   filter(!is.na(Attractive.Partners)&!is.na(Sincere.Partners)&!is.na(Intelligent.Partners)&!is.na(Fun.Partners)&!is.na(Ambitious.Partners))
 
 
-cor.test(data = data.partners.stated.mean.yourself,  ~Attractive.Yourself+Attractive.Partners)
-cor.test(data = subset(data.partners.stated.mean.yourself,Gender == 'Male'),  ~Attractive.Yourself+Attractive.Partners)
-cor.test(data = subset(data.partners.stated.mean.yourself,Gender == 'Female'),  ~Attractive.Yourself+Attractive.Partners)
+cor.test(data = data.yourself.partners,  ~Attractive.Yourself+Attractive.Partners)
+cor.test(data = subset(data.yourself.partners, Gender == 'Male'),  ~Attractive.Yourself+Attractive.Partners)
+cor.test(data = subset(data.yourself.partners, Gender == 'Female'),  ~Attractive.Yourself+Attractive.Partners)
 
-ggplot(data = data.partners.stated.mean.yourself,
-       mapping = aes(x =Attractive.Yourself, y= Attractive.Partners)) + geom_jitter() + geom_smooth(method = lm) + facet_wrap(~Gender) + geom_hline(aes( yintercept=mean(Attractive.Partners)),color = "red", linetype = 3)+ geom_vline(aes( xintercept=mean(Attractive.Yourself)),color = "red", linetype = 3)
+plot.yourself.partners <- ggplot(data = data.yourself.partners) + geom_point(position = "jitter") + facet_wrap(~Gender) + geom_smooth(method = lm) + scale_x_continuous(breaks = seq(0,10,2)) + scale_y_continuous(breaks = seq(0,10,2))
 
-cor.test(data = data.partners.stated.mean.yourself,  ~Sincere.Yourself+Sincere.Partners)
-cor.test(data = data.partners.stated.mean.yourself,  ~Intelligent.Yourself+Intelligent.Partners)
-ggplot(data = data.partners.stated.mean.yourself,
-       mapping = aes(x =Intelligent.Yourself, y= Intelligent.Partners)) + geom_jitter() + geom_smooth(method = lm) + facet_wrap(~Gender) + geom_hline(aes(color = "red", yintercept=mean(Intelligent.Partners)))
+plot.yourself.partners.attractive <- plot.yourself.partners  + aes(x = Attractive.Yourself, y = Attractive.Partners)
+plot.yourself.partners.ambitious <- plot.yourself.partners  + aes(x = Ambitious.Yourself, y = Ambitious.Partners)  
+plot.yourself.partners.sincere <- plot.yourself.partners  + aes(x = Sincere.Yourself, y = Sincere.Partners)
+plot.yourself.partners.intelligent <- plot.yourself.partners  + aes(x = Intelligent.Yourself, y = Intelligent.Partners)
+plot.yourself.partners.fun <- plot.yourself.partners  + aes(x = Fun.Yourself, y = Fun.Partners)
+
+grid.arrange(plot.yourself.partners.attractive, plot.yourself.partners.ambitious, plot.yourself.partners.sincere, plot.yourself.partners.intelligent, plot.yourself.partners.fun)
+
+```
+```{r most positive features}
+data.score.yourself.partners.all <- data.others.yourself.partners
+data.score.yourself.partners.males <- data.score.yourself.partners.all %>% filter(Gender == 'Male')
+data.score.yourself.partners.females <- data.score.yourself.partners.all %>% filter(Gender == 'Female')
+
+plot.score.partners <- ggplot(data = data.score.yourself.partners.all, mapping = aes(x = PositiveResponseScore, color = Gender))  + geom_point() +   geom_smooth(method = lm, se = F)
+
+plot.score.partners.attractive <- plot.score.partners + aes(y = Attractive.Partners)
+plot.score.partners.ambitious <- plot.score.partners + aes(y = Ambitious.Partners)
+plot.score.partners.sincere <- plot.score.partners + aes(y = Sincere.Partners)
+plot.score.partners.intelligent <- plot.score.partners + aes(y = Intelligent.Partners)
+plot.score.partners.fun <- plot.score.partners + aes(y = Fun.Partners)
+
+grid.arrange(plot.score.partners.attractive, plot.score.partners.ambitious, plot.score.partners.sincere, plot.score.partners.intelligent, plot.score.partners.fun)
+
+fit <- lm(PositiveResponseScore ~ Attractive.Partners + Ambitious.Partners+ Sincere.Partners+ Intelligent.Partners+ Fun.Partners, data = data.score.yourself.partners.all)
+summary(fit)
+
+ggplot(data = data.score.yourself.partners.all, mapping = aes())
+
 
 ```
