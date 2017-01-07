@@ -286,7 +286,7 @@ summary(fit)
 data.estimation <- data.others.yourself.partners %>% select(Attractive.Yourself, Fun.Yourself, PositiveResponseScore, Gender, Attractive.Partners)  %>% filter(!is.na(Attractive.Yourself))
 
 names(data.estimation) <- c("Attractive.Partners", "Fun.Partners","Score.Actual","Gender","Attractive.Actual")
-modelEstimate = predict(fit, newdata = estimation,
+modelEstimate = predict(fit, newdata = data.estimation,
                         interval="prediction", level = .95)
 
 data.estimation$Score.Estimated <- modelEstimate[,1]
