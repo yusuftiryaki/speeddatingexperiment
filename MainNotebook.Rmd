@@ -1,36 +1,45 @@
 ---
-title: "Speed Dating Experiment by DEGPG"
-author: "Orkun, Ozgur, Yusuf"
+title: "Don't Ask Me"
+author: "Orkun Gokhan, Ozgur Oney, Yusuf Tiryaki"
 output:
   html_document: default
   html_notebook: default
 ---
 
 
-# Giriş
-## Hikayemiz
-Hızlı tempolu şehir hayatının dezavantajlarından biri de eş bulmak için gerekli vakit ve iletişim ortamının yaratılamaması olarak karşımıza çıkıyor.
-Bu probleme çözüm olarak katılımcıların bir çok eş adayı ile hızlı bir şekilde tanışabileceği etkinliklerin düzenlendiğini görüyoruz.<br>
-...<br>
-...<br>
-Bu incelememizde katılımcıların kendi kendilerini nasıl tanımladıklarını, diğer insanların değerlendirmesi ile karşılaştırıp kendi tanımlarının beğeni almada etkili olup olmadığını sorgulayacağız. 
+# Inroduction
+## Background
+You are a busy and hardworking metropol citizen! 
+Long working hours and too much time wasted on traffic!
+There is no time and suitable environment to meet a romantic partner!
+Speed Dating Events is a popular match making activity in these days if you agree with all above.<br>
 
-## Veri kümesi
-Veri kümesi 195 özellik barındırıyor
-8368 gözlem var
-278 Erkek
-276 Kadın
+During the events, the attendees would have a four minute "first date" with every other participant of the opposite sex. At the end of their four minutes, participants were asked if they would like to see their date again. They were also asked to rate their date on six attributes: Attractiveness, Sincerity, Intelligence, Fun, Ambition, and Shared Interests.
+<br>
+<br>
+During analysis we are going to achieve some descriptive analysis about how participants describe themselves and how their partners voted them. 
+We are going to ask the question "If we decide the postive responses of participants just considering how they describe themselves, does it make sense?" and try find outcomes which help us to answer this question
 
-# Veri Temizliği ve Ön Hazırlık
+
+## Data Set
+The data set was gathered from speed dating events from 2002-2004. The research was carried out by Columbia Business School professors Ray Fisman and Sheena Iyengar as basis for their paper “Gender Differences in Mate Selection: Evidence From a Speed Dating Experiment”. The dataset also includes questionnaire data gathered from participants at different points in the process. These fields include: demographics, dating habits, self-perception across key attributes, beliefs on what others find valuable in a mate, and lifestyle information<br>
+In Dataset:<br>
+8368 records<br>
+278 Male participant<br>
+276 Female participant<br>
+
+# Data Cleaning And Setup
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE)
-#kullanılacak paketler
+knitr::opts_chunk$set(out.width='900px', dpi=200)
+#install packages if necessary
 if (!require("pacman")) install.packages("pacman")
   pacman::p_load("scales","ggplot2","dplyr","reshape2","grid","gridExtra","devtools","GGally")
 
+# thanks to ricardo
 if (!require(ggradar))
   devtools::install_github("ricardo-bion/ggradar", 
-                          dependencies=TRUE)
+                          dependencies=TRUE) 
 
 if(!exists("IFDEF_DEGPG_UTILS"))
   source("Utils.R")
@@ -39,8 +48,7 @@ rawdat <-
 read.csv('./data/Speed Dating Data.csv', header = T, stringsAsFactors = F)
 ```
 
-## Veri dönüşümleri
-Cinsiyet factor tipine dönüştürüldü
+Transform gender field to a more reable format 0/1 -> Female/Male and make it factor
 ```{r tranformations, echo = FALSE}
 data.transformed <- rawdat
 #Cinsiyeti daha okunur yapalım
@@ -48,9 +56,7 @@ data.transformed[rawdat$gender == 0,]$gender <- 'Female'
 data.transformed[rawdat$gender == 1,]$gender <- 'Male'
 data.transformed$gender <- as.factor(data.transformed$gender)
 ```
-
-## Veri temizleme
-Değerlendirmenin kimin için yapıldığı belli değilse analize girmemeli
+Remove records which have no id and partnerid
 ```{r data clean, echo = FALSE}
 #id yada partner id olmayanları çıkar
 data.cleaned <-
@@ -58,8 +64,7 @@ data.transformed %>%
   filter(!pid == "NA" | !id =="NA")
 ```
 
-## Veri ayıklama
-Sadece kullanacağımız değerlerden yeni bir veri kümesi oluşturduk
+Create a new data frame which is a subset of cleaned and only contains considered columns
 ```{r data selection, echo = FALSE}
 #sadece kullanacağımız attribute'ları alalım
 data.analyse <-
@@ -69,10 +74,8 @@ data.cleaned %>%
 rm(data.transformed,data.cleaned)
 
 ```
-# Analiz
-## Katılımcılar kendilerini nasıl değerlendiriyor
 
-```{r compile data, warning=FALSE}
+```{r compile data, echo=FALSE}
 data.others.yourself.partners <-
   data.analyse %>% 
   group_by(iid) %>% 
@@ -95,10 +98,17 @@ data.others.yourself.partners <-
     Fun.Partners = mean(fun_o, na.rm = TRUE), 
     Ambitious.Partners = mean(amb_o, na.rm = TRUE))
 
-GGally::ggpairs(data = data.others.yourself.partners)
+#GGally::ggpairs(data = data.others.yourself.partners)
 ```
 
-```{r how  measure yourself, echo = FALSE}
+# Analysis
+## How measure yourself
+This question about participants themselves. Every participant scores a 1-10 point for each attribute.
+So we can see how people think about themselves.
+
+### Measure yourself(Population mean)
+Let's how a look how pariticipants think about themselves on avarage
+```{r how  measure yourself mean, echo = FALSE}
 data.measure.yourself.mean <-
   data.others.yourself.partners %>% 
   filter(!is.na(Attractive.Yourself)) %>%
@@ -107,7 +117,10 @@ data.measure.yourself.mean <-
 
 plot.measure.yourself.mean.all <- ggradar(plot.data = data.measure.yourself.mean, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4 )
 plot.measure.yourself.mean.all
+```
 
+### Measure yourself distribution
+```{r how  measure yourself, echo = FALSE}
 
 plot.measure.yourself <- ggplot(data = data.others.yourself.partners) + coord_flip()
 
@@ -125,6 +138,12 @@ plot.measure.yourself.fun <- plot.measure.yourself + geom_boxplot(mapping = aes(
 
 grid.arrange(plot.measure.yourself.attractive, plot.measure.yourself.ambitious, plot.measure.yourself.sincere, plot.measure.yourself.intelligent, plot.measure.yourself.fun, ncol = 1)
 
+```
+Ambitious and Fun disitribitions are look like normally distributed but others have upper or lower quartile medians. Data has high density points in these quartiles. So using median is more meaningfull to describe these features.
+
+### Measure yourself Median
+According to distribution properties median value is more descriptive than mean.
+```{r how  measure yourself median, echo = FALSE}
 #median daha açıklayıcı
 data.measure.yourself.median <-
   data.others.yourself.partners %>% 
@@ -133,12 +152,15 @@ data.measure.yourself.median <-
   summarise(Attractive = median(Attractive.Yourself), Sincere = median(Sincere.Yourself), Intelligent = median(Intelligent.Yourself), Fun = median(Fun.Yourself), Ambitious = median(Ambitious.Yourself)) 
 plot.measure.yourself.median.all <- ggradar(plot.data = data.measure.yourself.median, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4 )
 plot.measure.yourself.median.all
-
 ```
+Famales describe themselves more Sincere than males and males describe themselves more Intelligent but for other features it look likes that there is no gender effect.
+All the features are have upper values than %50 as radar chart says, there is no anomolies for any feature.
 
-## Katılımcılar kendilerinin nasıl değerlendirileceğini düşünüyor
+## How others perceive you
+This question is about 'the others'. All we have a 'the others' concept in our mind so lets listen some statistics about it.
 
-```{r how  other percieve, echo = FALSE}
+### How others perceive you(Population Mean)
+```{r how  other percieve mean, echo = FALSE}
 data.other.percieve.mean <-
   data.others.yourself.partners %>% 
   filter(!is.na(Attractive.Others)) %>%
@@ -147,7 +169,10 @@ data.other.percieve.mean <-
 
 plot.other.percieve.mean.all <- ggradar(plot.data = data.other.percieve.mean, grid.mid = 5, grid.max = 10, legend.title = "Gender", grid.label.size =3,axis.label.size=4)
 plot.other.percieve.mean.all
+```
 
+### How others perceive you distribution 
+```{r how  other percieve, echo = FALSE}
 plot.other.percieve <- ggplot(data = data.others.yourself.partners) +  coord_flip()
 
 plot.other.percieve.attractive <- plot.other.percieve + geom_boxplot(mapping = aes(x = Gender, y = Attractive.Others)) + labs(y="Attractiveness", x ="Gender", title = "How Attractive Are You By Others?")
@@ -162,6 +187,10 @@ plot.other.percieve.fun <-plot.other.percieve + geom_boxplot(mapping = aes(x = G
 
 grid.arrange(plot.other.percieve.attractive, plot.other.percieve.ambitious, plot.other.percieve.sincere, plot.other.percieve.intelligent, plot.other.percieve.fun, ncol = 1 )
 
+```
+
+### How others perceive you(Population Median) 
+```{r how  other percieve median, echo = FALSE}
 # median mean'den daha açıklayıcı görünüyor
 data.other.percieve.median <-
   data.others.yourself.partners %>% 
@@ -173,8 +202,14 @@ plot.other.percieve.median.all <- ggradar(plot.data = data.other.percieve.median
 plot.other.percieve.median.all
 
 ```
+People change their mind when we ask how others think about you in the field Sincere, Intelligent and Fun.
+When measuring themselves females have more Sincere points but they think same with males when 'the others' effect asked. Intelligence is the same issue for males.
+Fun feature is interesting beacuse females and males differ in this case either they think same when there is no the others effect
 
-## Göründüğümüz gibi olduğumuzu mu düşünüyoruz?
+## The others and yourself?
+Is it possible to say measuring yourself and deciding about how others think about you has a relationship?
+We measure ourselves without considering how others perceive us or vice versa?
+Lets have some statistics
 ```{r are we same test, echo = TRUE}
 #measure yourself and other percieve sorularını cevaplayanlar
 data.others.yourself <-
@@ -189,51 +224,64 @@ t.test(data.others.yourself$Attractive.Yourself, data.others.yourself$Attractive
 t.others.yourself.attractive
 cor.test(data = data.others.yourself, ~Attractive.Yourself+Attractive.Others) -> cor.others.yourself.attractive
 cor.others.yourself.attractive
-plot.others.yourself.attractive <- plot.others.yourself + aes(x = Attractive.Yourself, y = Attractive.Others) + annotate("text", x = 10, y = 1, label = paste("Cor = ",round(cor.others.yourself.attractive$estimate,digits = 4) )) +
-annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourself.attractive$p.value, digits = 4) ))
+plot.others.yourself.attractive <- plot.others.yourself + aes(x = Attractive.Yourself, y = Attractive.Others) + annotate("text", x = 7, y = 1, label = paste("Cor = ",round(cor.others.yourself.attractive$estimate,digits = 4) )) +
+annotate("text", x = 7, y = 2, label = paste("T-paired = ",round(t.others.yourself.attractive$p.value, digits = 4) ))
 plot.others.yourself.attractive
 
 t.test(data.others.yourself$Ambitious.Yourself, data.others.yourself$Ambitious.Others, paired=TRUE)-> t.others.yourself.ambitious
 t.others.yourself.ambitious
 cor.test(data = data.others.yourself, ~Ambitious.Yourself+Ambitious.Others) -> cor.others.yourself.ambitious
 cor.others.yourself.ambitious
-plot.others.yourself.ambitious <- plot.others.yourself + aes(x = Ambitious.Yourself, y = Ambitious.Others) + annotate("text", x = 10, y = 1, label = paste("Cor = ",round(cor.others.yourself.ambitious$estimate,digits = 4) )) +
-annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourself.ambitious$p.value, digits = 4) ))
+plot.others.yourself.ambitious <- plot.others.yourself + aes(x = Ambitious.Yourself, y = Ambitious.Others) + annotate("text", x = 7, y = 1, label = paste("Cor = ",round(cor.others.yourself.ambitious$estimate,digits = 4) )) +
+annotate("text", x = 7, y = 2, label = paste("T-paired = ",round(t.others.yourself.ambitious$p.value, digits = 4) ))
 plot.others.yourself.ambitious
 
 t.test(data.others.yourself$Sincere.Yourself, data.others.yourself$Sincere.Others, paired=TRUE)-> t.others.yourself.sincere
 t.others.yourself.sincere
 cor.test(data = data.others.yourself, ~Sincere.Yourself+Sincere.Others) -> cor.others.yourself.sincere
 cor.others.yourself.sincere
-plot.others.yourself.sincere <- plot.others.yourself + aes(x = Sincere.Yourself, y = Sincere.Others) + annotate("text", x = 10, y = 1, label = paste("Cor = ",round(cor.others.yourself.sincere$estimate,digits = 4) )) +
-annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourself.sincere$p.value, digits = 4) ))
+plot.others.yourself.sincere <- plot.others.yourself + aes(x = Sincere.Yourself, y = Sincere.Others) + annotate("text", x = 7, y = 1, label = paste("Cor = ",round(cor.others.yourself.sincere$estimate,digits = 4) )) +
+annotate("text", x = 7, y = 2, label = paste("T-paired = ",round(t.others.yourself.sincere$p.value, digits = 4) ))
 plot.others.yourself.sincere
 
 t.test(data.others.yourself$Intelligent.Yourself, data.others.yourself$Intelligent.Others, paired=TRUE)-> t.others.yourself.intelligent
 t.others.yourself.intelligent
 cor.test(data = data.others.yourself, ~Intelligent.Yourself+Intelligent.Others) -> cor.others.yourself.intelligent
 cor.others.yourself.intelligent
-plot.others.yourself.intelligent <- plot.others.yourself + aes(x = Intelligent.Yourself, y = Intelligent.Others) + annotate("text", x = 10, y = 1, label = paste("Cor = ",round(cor.others.yourself.intelligent$estimate,digits = 4) )) +
-annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourself.intelligent$p.value, digits = 4) ))
+plot.others.yourself.intelligent <- plot.others.yourself + aes(x = Intelligent.Yourself, y = Intelligent.Others) + annotate("text", x = 7, y = 1, label = paste("Cor = ",round(cor.others.yourself.intelligent$estimate,digits = 4) )) +
+annotate("text", x = 7, y = 2, label = paste("T-paired = ",round(t.others.yourself.intelligent$p.value, digits = 4) ))
 plot.others.yourself.intelligent
 
 t.test(data.others.yourself$Fun.Yourself, data.others.yourself$Fun.Others, paired=TRUE)-> t.others.yourself.fun
 t.others.yourself.fun
 cor.test(data = data.others.yourself, ~Fun.Yourself+Fun.Others) -> cor.others.yourself.fun
 cor.others.yourself.fun
-plot.others.yourself.fun <- plot.others.yourself + aes(x = Fun.Yourself, y = Fun.Others) + annotate("text", x = 10, y = 1, label = paste("Cor = ",round(cor.others.yourself.fun$estimate,digits = 4) )) +
-annotate("text", x = 9, y = 2, label = paste("T-paired = ",round(t.others.yourself.fun$p.value, digits = 4) ))
+plot.others.yourself.fun <- plot.others.yourself + aes(x = Fun.Yourself, y = Fun.Others) + annotate("text", x = 7, y = 1, label = paste("Cor = ",round(cor.others.yourself.fun$estimate,digits = 4) )) +
+annotate("text", x = 7, y = 2, label = paste("T-paired = ",round(t.others.yourself.fun$p.value, digits = 4) ))
 plot.others.yourself.fun
 
 
 grid.arrange(plot.others.yourself.attractive, plot.others.yourself.ambitious, plot.others.yourself.sincere, plot.others.yourself.intelligent, plot.others.yourself.fun)
 
 ```
+We divide the set two experiment groups 'Measure Yourself' and 'How others percieve you'. Participants of each group are same so we have the chance to apply a T-Paired test. 
+T-Paired test can say us if particapants are same person when they are talking about features as themselves and as others view?
+All the features have strong positive correlations. If a person believe that he/she is attractive then nearly sure others will percieve he/she attractive.
+Having a conclusion using T-paired test statistics is really difficult. For Ambitious it is 1 which means nobody changes their mind with the others effect but for Sincire attribute everybody changes their mind.
+May be values are not suitable for a T-Paired test beacuse we know that paticipants give points in discerete scale which is 1 to 10 so there is no option to give 5.2 point result can differ in categorical manner.
 
+
+## How measure yourself and how others percieve you
 ```{r are we same, echo = FALSE}
 grid.arrange(plot.measure.yourself.median.all, plot.other.percieve.median.all, ncol = 1)
 ```
+ 
 
+
+# Meet with your partners
+Now we are ready to get objective evaluations from the real 'the others'. Every participant assessed his/her partners and here we are with results.
+
+## Measure yourself and Partners evaluations
 ```{r market value, echo = FALSE}
 data.partners.mean <-
   data.others.yourself.partners %>% 
@@ -249,11 +297,11 @@ data.yourself.partners <-
   filter(!is.na(Attractive.Partners)&!is.na(Sincere.Partners)&!is.na(Intelligent.Partners)&!is.na(Fun.Partners)&!is.na(Ambitious.Partners))
 
 
-cor.test(data = data.yourself.partners,  ~Attractive.Yourself+Attractive.Partners)
-cor.test(data = subset(data.yourself.partners, Gender == 'Male'),  ~Attractive.Yourself+Attractive.Partners)
-cor.test(data = subset(data.yourself.partners, Gender == 'Female'),  ~Attractive.Yourself+Attractive.Partners)
+#cor.test(data = data.yourself.partners,  ~Attractive.Yourself+Attractive.Partners)
+#cor.test(data = subset(data.yourself.partners, Gender == 'Male'),  ~Attractive.Yourself+Attractive.Partners)
+#cor.test(data = subset(data.yourself.partners, Gender == 'Female'),  ~Attractive.Yourself+Attractive.Partners)
 
-plot.yourself.partners <- ggplot(data = data.yourself.partners) + geom_point(position = "jitter") + facet_wrap(~Gender) + geom_smooth(method = lm) + scale_x_continuous(breaks = seq(0,10,2)) + scale_y_continuous(breaks = seq(0,10,2))
+plot.yourself.partners <- ggplot(data = data.yourself.partners) + geom_point(position = "jitter", alpha = 1/2) +  facet_wrap(~Gender) + geom_smooth(method = lm) + scale_x_continuous(breaks = seq(0,10,2)) + scale_y_continuous(breaks = seq(0,10,2))
 
 plot.yourself.partners.attractive <- plot.yourself.partners  + aes(x = Attractive.Yourself, y = Attractive.Partners)
 plot.yourself.partners.ambitious <- plot.yourself.partners  + aes(x = Ambitious.Yourself, y = Ambitious.Partners)  
@@ -264,13 +312,22 @@ plot.yourself.partners.fun <- plot.yourself.partners  + aes(x = Fun.Yourself, y 
 grid.arrange(plot.yourself.partners.attractive, plot.yourself.partners.ambitious, plot.yourself.partners.sincere, plot.yourself.partners.intelligent, plot.yourself.partners.fun)
 
 ```
-```{r most positive features}
+Scatter plots are for participants self measurements and actual scores by partners. We can see that there is not too much relationship between how participant describe himself/herself and  his/her partners describe him/her.
+Just for males it looks like if they think they are attractive  also their partners think they are attractive.
+
+## Positive response score by gender
+```{r decision score by gender}
 data.score.yourself.partners.all <- data.others.yourself.partners
 data.score.yourself.partners.males <- data.score.yourself.partners.all %>% filter(Gender == 'Male')
 data.score.yourself.partners.females <- data.score.yourself.partners.all %>% filter(Gender == 'Female')
 
 ggplot(data = data.score.yourself.partners.all) + geom_histogram(mapping = aes(x = PositiveResponseScore,fill = Gender), binwidth = 0.02) + facet_wrap(~Gender)
+```
+Positive response score distribution looks like uniform. For males it is more right screwed which means high score males less common. For females it looks like a perfect uniform distribution.
+For population on avarage; a participant thinks half of his/her partners are ideal romantic candidates for him/her
 
+## Which features are important to get a positive response?
+```{r most positive features}
 plot.score.partners <- ggplot(data = data.score.yourself.partners.all, mapping = aes(x = PositiveResponseScore, color = Gender))  + geom_point(alpha = 1/2) +   geom_smooth(method = lm, se = F)
 
 plot.score.partners.attractive <- plot.score.partners + aes(y = Attractive.Partners)
@@ -281,6 +338,13 @@ plot.score.partners.fun <- plot.score.partners + aes(y = Fun.Partners)
 
 grid.arrange(plot.score.partners.attractive, plot.score.partners.ambitious, plot.score.partners.sincere, plot.score.partners.intelligent, plot.score.partners.fun)
 
+```
+Most correlated attributes are Attractive and Fun. If a participant find his/her partner attractive it is very common to decide it is a ideal romantic partner and it is same for both gender.
+
+
+
+## If just ask participant?
+```{r most positive features experiment}
 fit <- lm(PositiveResponseScore ~ Attractive.Partners + Fun.Partners, data = subset(data.score.yourself.partners.all, !is.na(Attractive.Yourself)))
 summary(fit)
 data.estimation <- data.others.yourself.partners %>% select(Attractive.Yourself, Fun.Yourself, PositiveResponseScore, Gender, Attractive.Partners)  %>% filter(!is.na(Attractive.Yourself))
@@ -291,10 +355,14 @@ modelEstimate = predict(fit, newdata = data.estimation,
 
 data.estimation$Score.Estimated <- modelEstimate[,1]
 ggplot(data = data.estimation, mapping = aes(x = Score.Actual, y = Score.Estimated,color = Gender)) + geom_point() + scale_y_continuous(breaks = seq(0,1,0.25))
-
-
-
-#ggplot(data = data.score.yourself.partners.all, mapping = aes())
-
-
 ```
+This is a simple experiment to see what will be difference if we decide just asking participants about themselves. We took the most signicifant attributes ('Attractive', 'Fun') and build a linear model to estimate positive response rate.
+Actually this is not a menaingfull statistical method, it just for fun :)
+Result plot tells us answers to 'Measure yourself' questions is not related romantic partner matching. 
+
+# Thanks
+This is a explotory data anlysis lecture assignment project. So for all team members it is first time making a analysis with R. During this process many shared analysis helped us about analyse methodolies and R syntax.
+
+Very thanks to [JPHwang] (https://www.kaggle.com/jph84562/d/annavictoria/speed-dating-experiment/the-ugly-truth-of-people-decisions-in-speed-dating/notebook) for inspiring analysis for our team.   
+
+Very thanks to [ColinLeverger] (https://www.kaggle.com/colinleverger/d/annavictoria/speed-dating-experiment/exploring-the-speed-dating-dataset) for useful analysing methods.  
