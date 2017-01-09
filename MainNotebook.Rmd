@@ -1,5 +1,5 @@
 ---
-title: "Don't Ask Me"
+title: "Should I Ask Myself"
 author: "Orkun Gokhan, Ozgur Oney, Yusuf Tiryaki"
 output:
   html_document: default
@@ -41,8 +41,8 @@ if (!require(ggradar))
   devtools::install_github("ricardo-bion/ggradar", 
                           dependencies=TRUE) 
 
-if(!exists("IFDEF_DEGPG_UTILS"))
-  source("Utils.R")
+#if(!exists("IFDEF_DEGPG_UTILS"))
+#  source("Utils.R")
 
 rawdat <- 
 read.csv('./data/Speed Dating Data.csv', header = T, stringsAsFactors = F)
@@ -70,6 +70,18 @@ Create a new data frame which is a subset of cleaned and only contains considere
 data.analyse <-
 data.cleaned %>%
   select(iid,pid, gender, attr3_1, sinc3_1, intel3_1, fun3_1, amb3_1, attr5_1, sinc5_1, intel5_1, fun5_1, amb5_1, attr, sinc, intel, fun, amb, shar,attr_o, sinc_o, intel_o, fun_o, amb_o, shar_o,dec_o,dec)
+#sadece ikinci analiz için kullanacağımız farkları alalım
+data.analyse2 <-
+  data.cleaned %>%
+  select(iid,pid, gender, samerace ,match ,age,race_o ,race ,imprace, goal, date ,career_c ,numdat_2 , match_es , satis_2,you_call,them_cal)
+#sadece üçüncü analiz için kullanacağımız farkları alalım
+age.difference.subgroup <- data.transformed %>%
+  group_by(age, age_o) %>%
+  summarise(
+    n.people = n(), 
+    n.matches = sum(match)
+  ) %>%
+  filter(!is.na(age) & !is.na(age_o))
 # geçici tabloları temizleyelim
 rm(data.transformed,data.cleaned)
 
@@ -210,7 +222,7 @@ Fun feature is interesting beacuse females and males differ in this case either 
 Is it possible to say measuring yourself and deciding about how others think about you has a relationship?
 We measure ourselves without considering how others perceive us or vice versa?
 Lets have some statistics
-```{r are we same test, echo = TRUE}
+```{r are we same test,echo = FALSE}
 #measure yourself and other percieve sorularını cevaplayanlar
 data.others.yourself <-
   data.others.yourself.partners %>% 
@@ -316,7 +328,7 @@ Scatter plots are for participants self measurements and actual scores by partne
 Just for males it looks like if they think they are attractive  also their partners think they are attractive.
 
 ## Positive response score by gender
-```{r decision score by gender}
+```{r decision score by gender, echo = FALSE}
 data.score.yourself.partners.all <- data.others.yourself.partners
 data.score.yourself.partners.males <- data.score.yourself.partners.all %>% filter(Gender == 'Male')
 data.score.yourself.partners.females <- data.score.yourself.partners.all %>% filter(Gender == 'Female')
@@ -327,7 +339,7 @@ Positive response score distribution looks like uniform. For males it is more ri
 For population on avarage; a participant thinks half of his/her partners are ideal romantic candidates for him/her
 
 ## Which features are important to get a positive response?
-```{r most positive features}
+```{r most positive features, echo = FALSE}
 plot.score.partners <- ggplot(data = data.score.yourself.partners.all, mapping = aes(x = PositiveResponseScore, color = Gender))  + geom_point(alpha = 1/2) +   geom_smooth(method = lm, se = F)
 
 plot.score.partners.attractive <- plot.score.partners + aes(y = Attractive.Partners)
@@ -344,7 +356,7 @@ Most correlated attributes are Attractive and Fun. If a participant find his/her
 
 
 ## If just ask participant?
-```{r most positive features experiment}
+```{r most positive features experiment , echo = FALSE}
 fit <- lm(PositiveResponseScore ~ Attractive.Partners + Fun.Partners, data = subset(data.score.yourself.partners.all, !is.na(Attractive.Yourself)))
 summary(fit)
 data.estimation <- data.others.yourself.partners %>% select(Attractive.Yourself, Fun.Yourself, PositiveResponseScore, Gender, Attractive.Partners)  %>% filter(!is.na(Attractive.Yourself))
@@ -360,8 +372,136 @@ This is a simple experiment to see what will be difference if we decide just ask
 Actually this is not a menaingfull statistical method, it just for fun :)
 Result plot tells us answers to 'Measure yourself' questions is not related romantic partner matching. 
 
+
+## Other perspectives
+We have focused on attributes of people recently, from now on we are going to check what other attributes are;
+
+At the beginning we reshape our datasets
+
+```{r data reshape, echo = FALSE}
+data.goalrace <-
+  data.analyse2 %>% 
+  group_by(iid) %>% 
+  summarise(
+    Gender = first(gender),
+    Samerace = first(samerace),
+    Match = first(match),
+    Race= first(race),
+    PartnerRace= first(race_o),
+    imprace = first(imprace), 
+    Goal = mean(goal, na.rm = TRUE),
+    CareerOpp = first(career_c),
+    EstMatch = first(match_es),
+    YouCall = mean(you_call, na.rm = TRUE),
+    ThemCall = mean(them_cal, na.rm = TRUE))
+```
+After that we choose only four column to make our analyse easier
+
+### Is there any relation between goals and set up a dates?
+
+```{r defined New Data for Goal Analyse , echo = FALSE}
+#Hedefi görebilmek adına yeni data seti oluşturduk
+data.goal <-
+  data.analyse2 %>% 
+  group_by(iid) %>% 
+  summarise(
+    Gender = first(gender),
+    match = first(match),
+    YouCall = mean(you_call, na.rm = TRUE),
+    ThemCall = mean(them_cal, na.rm = TRUE),
+    Goal = mean(goal, na.rm = TRUE))
+```
+Defined goals with explanation as Speed Dating Data Key
+```{r defined goals in words , echo = FALSE}
+#Hedefin data içerisinde yer almayan anlamlarını ekledik
+
+data.gname <- data.goal
+#Eşleşmeleri açalım
+data.gname[data.goal$Goal == '1',]$Goal <- 'Fun Night Out'
+data.gname[data.goal$Goal == '2',]$Goal <- 'Meet New People'
+data.gname[data.goal$Goal == '3',]$Goal <- 'To Get Date'
+data.gname[data.goal$Goal == '4',]$Goal <- 'Serius Relation'
+data.gname[data.goal$Goal == '5',]$Goal <- 'to say I did'
+data.gname[data.goal$Goal == '6',]$Goal <- 'other'
+data.gname[data.goal$Goal == 'NaN',]$Goal <- 'other'
+data.gname$Goal <- as.factor(data.gname$Goal)
+```
+
+Our data includes two fields; 
+youcall= How many partners you have contacted to set up a date?
+themcall= How many partners have contacted with you?
+
+We want to prove the effect of goals for setting up a date
+
+```{r graphs for goals of people , echo = FALSE}
+
+##Kişilerin geliş amacına göre eşleşme çağrılarının gösterimi
+ggplot(data = data.gname) + geom_histogram(stat="identity",mapping = aes(x = Goal, y=YouCall, fill = Gender)) + ggtitle("You-Gender")+ theme(axis.title=element_text(face="bold.italic",size="12", color="brown"), legend.position="top")
+
+##Kişilerin geliş amacına göre onlarla iletişime geçen diğer kişilerin gösterimi
+ggplot(data = data.gname) + geom_histogram(stat="identity",mapping = aes(x = Goal, y=ThemCall, fill = Gender)) + ggtitle("Them-Gender")+ theme(axis.title=element_text(face="bold.italic",size="12", color="brown"), legend.position="top")
+##Total Görünüm
+ggplot(data = data.gname) + geom_histogram(stat="identity",mapping = aes(x = Goal, y=ThemCall+YouCall, fill = Gender)) + ggtitle("TotalCall-Gender")+ theme(axis.title=element_text(face="bold.italic",size="12", color="brown"), legend.position="top")
+```
+
+Most of people (who have a match) comes speed dating for two reason "Fun Night Out and Meet New People"
+
+There is a domination of men to contacted set up a date(in your gender graph), and there is a domination of women to have request for set up a date. 
+
+As an interesting point some people join speed dating just to say "i did it". Mostly they don't want to contacted anybody, but all of them have contacted with their partners. So if you are not interested with other people, they try to impress you more!
+
+
+### What people think about Race?
+There are lots of questions in our analysis about Race, we have a race of people, race of their partner and their opinion about matching with same and different race(imprace).
+
+First of all, we want to explain what is imprace?
+People who want to match with the same race, they choose close to 10 in our model. If the race is not important for them, they choose close to 1.
+
+Transform samerace field to a more reable format 0/1 -> Diff Race Match /Same Race Match and make it factor 
+```{r graph of race and match, echo = FALSE}
+
+#Okunur olması adına Irk eşlemesini detaylandırdık
+data.goalrace <- data.goalrace
+#Eşleşmeleri açalım
+data.goalrace[data.goalrace$Samerace == 0,]$Samerace <- 'Diff Race Match'
+data.goalrace[data.goalrace$Samerace == 1,]$Samerace <- 'Same Race Match'
+data.goalrace$Samerace <- as.factor(data.goalrace$Samerace)
+#Samerace detayına göre iki grafik çizdirerek insanların aynı ırkta olmaya verdiği önem ile aynı ırktan gerçekleşen eşleşme durumlarını karşılaştırdık
+ggplot(data = data.goalrace) + geom_histogram(mapping = aes(x = imprace, fill = Gender), binwidth = 1) + facet_wrap(~Samerace) + ggtitle("Race Effect")+  theme(axis.title=element_text(face="bold.italic",size="12", color="red"), legend.position="top") 
+
+```
+So we have a figure to count match numbers of people in 2 graph with effect of imprace.
+
+In same race match graph, we can see most of the people doesn't believe the effect of race in their selection. But we can see they all match with the same race, so they have prejudice to choose someone in their subconscious.
+For the good news, some people say I am totally against on relationships with a different race. After speed dating they found somebody to change their idea. But it's a really small group. 
+
+
+### Is there any effects on age gap?
+
+Age difference between partners has long been a question of interest. Research on age difference in couples suggests that while the desired gap for men and women is around 13-14 years on average (10-15 years) in reality long-term pairs only have 3-4 years disparity.
+
+```{r age-gap , echo = FALSE}
+age.diff <- age.difference.subgroup %>%
+  filter(age - age_o >= 0) %>%
+  mutate(n.years = age - age_o) %>%
+  group_by(n.years) %>%
+  summarise(
+    n.matches = sum(n.matches)
+  ) %>%
+  arrange(n.years)
+
+ggplot(age.diff[age.diff$n.years < 15,], aes(x = n.years, y = n.matches)) +
+  geom_bar(stat = "identity", position = "dodge", fill="darkgreen") +
+  xlab("Years of difference between people's age") + 
+  ylab("Matches") + 
+  ggtitle("Age factor in matching")
+```
+
+In speeddating people wants to choose a partner without huge age-gap.
+As we can see in graph, most of relations is matched in between 0 and 5 age gap.
+
 # Thanks
-This is a explotory data anlysis lecture assignment project. So for all team members it is first time making a analysis with R. During this process many shared analysis helped us about analyse methodolies and R syntax.
+This is a exploratory data anlysis lecture assignment project. So for all team members it is first time making a analysis with R. During this process many shared analysis helped us about analyse methodolies and R syntax.
 
 Very thanks to [JPHwang] (https://www.kaggle.com/jph84562/d/annavictoria/speed-dating-experiment/the-ugly-truth-of-people-decisions-in-speed-dating/notebook) for inspiring analysis for our team.   
 
